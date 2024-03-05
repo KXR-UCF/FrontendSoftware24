@@ -1,4 +1,7 @@
-import KXR_LTI_config-settings
+from KXR_LTI_config_settings import wanda_adc_channels
+from KXR_LTI_config_settings import tv_entry_mode
+from KXR_LTI_config_settings import tv_entry_rocket
+
 
 # sending tv data
 def tv_send():
