@@ -5,7 +5,6 @@ from tkinter import messagebox
 from tkinter import colorchooser
 import os
 import socket
-from tv_communication import *
 
 
 
@@ -30,10 +29,14 @@ class adc_channel:
         self.index = index
         self.data_channel = 0
         self.data_type = 0
+        self.data_type_name = 0
         self.data_serial = 0
+        
         self.entry_channel = 0
         self.entry_type = 0
+        self.entry_type_name = 0
         self.entry_serial = 0
+        
         self.color_code = 0
         self.color_button = 0
     
@@ -48,21 +51,28 @@ class adc_channel:
         # type
         self.data_type = StringVar()
         self.entry_type = ttk.Combobox(wanda_sframe, values=wanda_adc_type_values, state='readonly', textvariable=self.data_type)
+        self.entry_type.bind('<<ComboboxSelected>>', self.type_selection)
         self.entry_type.grid(row=num_channels+4, column=1, padx=padding, pady=padding)
+        # type name
+        self.data_type_name = StringVar()
+        self.entry_type_name = ttk.Combobox(wanda_sframe, values=[' '], state='readonly', textvariable=self.data_type_name)
+        self.entry_type_name.bind('<<ComboboxSelected>>', self.type_selection)
+        self.entry_type_name.grid(row=num_channels+4, column=2, padx=padding, pady=padding)
         # serial
         self.data_serial = StringVar()
         self.entry_serial = Spinbox(wanda_sframe, from_=1, to=127, wrap=True, textvariable=self.data_serial, validate='all', validatecommand = validate_input)
-        self.entry_serial.grid(row=num_channels+4, column=2, padx=padding, pady=padding)
+        self.entry_serial.grid(row=num_channels+4, column=3, padx=padding, pady=padding)
         # color
         self.color_code = '#000000'
         self.color_button = Button(wanda_sframe, text='Color', command=self.choose_color)
-        self.color_button.grid(row=num_channels+4, column=3, padx=padding, pady=padding)
+        self.color_button.grid(row=num_channels+4, column=4, padx=padding, pady=padding)
 
     # destroys last adc row
     def destroy_widget(self):
         # just need to destroy actual widgets
         self.entry_channel.destroy()
         self.entry_type.destroy()
+        self.entry_type_name.destroy()
         self.entry_serial.destroy()
         self.color_button.destroy()
 
@@ -98,6 +108,15 @@ class adc_channel:
         if self.color_code is None:
             self.color_code = temp
         self.color_button.config(bg=self.color_code)
+    
+    # set type name values based on type
+    def type_selection(self, event):
+        if self.entry_type.current() == 0:
+            self.entry_type_name.config(values=wanda_adc_pressure_values)
+        if self.entry_type.current() == 1:
+            self.entry_type_name.config(values=wanda_adc_load_values)
+        if self.entry_type.current() == 2:
+            self.entry_type_name.config(values=wanda_adc_thermo_values)
 
 
 
@@ -155,6 +174,9 @@ def input_validation():
         if wanda.entry_type.get().strip() == '':
             messagebox.showwarning(title='Incomplete Input', message='You are missing a type')
             all_good = False
+        if wanda.entry_type_name.get().strip() == '':
+            messagebox.showwarning(title='Incomplete Input', message='You are missing a type name')
+            all_good = False
         if wanda.entry_serial.get().strip() == '':
             messagebox.showwarning(title='Incomplete Input', message='You are missing a serial')
             all_good = False
@@ -176,8 +198,69 @@ def input_validation():
     if all_good:
         log()
         stm32_send()
+        #from tv_communication import tv_send # I know this is bad coding practice. Sue me
         tv_send()
         wanda_send()
+
+def tv_send():
+    tv_log = open(tv_log_path, 'w')
+    
+    tv_log.write('Telemetry Viewer v0.8 Settings\n\
+\n\
+GUI Settings:\n\
+\n\
+    tile column count = 6\n\
+    tile row count = 6\n\
+    time format = Only Time\n\
+    show 24-hour time = false\n\
+    show hint notifications = true\n\
+    hint notifications color = 0x00FF00\n\
+    show warning notifications = true\n\
+    warning notifications color = 0xFFFF00\n\
+    show failure notifications = true\n\
+    failure notifications color = 0xFF0000\n\
+    show verbose notifications = false\n\
+    verbose notifications color = 0x00FFFF\n\
+    show plot tooltips = true\n\
+    smooth scrolling = true\n\
+    show fps and period = false\n\
+    benchmarking = false\n\
+    antialiasing level = 8\n\
+\n\
+1 Connections:\n\
+\n\
+    connection type = UDP\n\
+    server port = 8080\n\
+    packet type = Binary\n\
+    sample rate hz = 1000\n\
+    sync word = 0xAA\n\
+    sync word byte count = 1\n\
+    datasets count = 39\n\
+\n\
+')
+    
+    # loop through adc channels
+    for channel in wanda_adc_channels.adc_channels:
+        if channel.entry_channel.current() != 0:
+            tv_log.write('      dataset location = ' + str( (channel.entry_channel.current()-1) * 4 + 1 ) + '\n')
+            tv_log.write('      binary processor = float32 LSB First\n')
+            tv_log.write('      name = ' + str(channel.data_type_name.get()) + '\n')
+            tv_log.write('      color = 0x' + str(channel.color_code.replace('#', '')) + '\n')
+            tv_log.write('      unit = '  + '\n')
+            tv_log.write('      conversion factor a = 1.0\n')
+            tv_log.write('      conversion factor b = 1.0\n')
+            tv_log.write('\n')
+    
+    tv_log.write('      checksum location = -1\n\
+      checksum processor = null\n\
+\n\
+0 Charts:\n\
+\n')
+    
+    tv_log.write(tv_entry_mode.get()+'\n')
+    tv_log.write(tv_entry_rocket.get()+'\n')
+
+    tv_log.close()
 
 # sending stm 32 data
 def stm32_send():
@@ -233,6 +316,7 @@ def log():
     for channel in wanda_adc_channels.adc_channels:
         config_log.write(channel.data_channel.get()+'\n')
         config_log.write(channel.data_type.get()+'\n')
+        config_log.write(channel.data_type_name.get()+'\n')
         config_log.write(channel.data_serial.get()+'\n')
         config_log.write(channel.color_code+'\n')
         
@@ -269,6 +353,7 @@ def read():
         wanda_adc_channels.add_channel(1)
         wanda_adc_channels.adc_channels[i].data_channel.set(config_log.readline().strip())
         wanda_adc_channels.adc_channels[i].data_type.set(config_log.readline().strip())
+        wanda_adc_channels.adc_channels[i].data_type_name.set(config_log.readline().strip())
         wanda_adc_channels.adc_channels[i].data_serial.set(config_log.readline().strip())
         wanda_adc_channels.adc_channels[i].color_code = config_log.readline().strip()
         wanda_adc_channels.adc_channels[i].color_button.config(bg=wanda_adc_channels.adc_channels[i].color_code)
@@ -291,6 +376,7 @@ def read():
 # Variables
 padding = 5
 stm32_log_path = 'Python Output/stm32_log.txt' # will need to update later
+tv_log_path = 'Python Output/alldata.txt' # will need to update later
 config_log_path = 'Python Output/' # will need to update later
 prev_selection = 0
 
@@ -357,7 +443,8 @@ Label(wanda_sframe, text ='Wanda Options:').grid(row=0, column=0, padx=padding, 
 Label(wanda_sframe, text='[ADC]').grid(row=1, column=0, padx=padding, pady=padding)
 Label(wanda_sframe, text='Physical').grid(row=3, column=0, padx=padding, pady=padding)
 Label(wanda_sframe, text='Type').grid(row=3, column=1, padx=padding, pady=padding)
-Label(wanda_sframe, text='Serial').grid(row=3, column=2, padx=padding, pady=padding)
+Label(wanda_sframe, text='Type Name').grid(row=3, column=2, padx=padding, pady=padding)
+Label(wanda_sframe, text='Serial').grid(row=3, column=3, padx=padding, pady=padding)
 
 # values for the user to select
 wanda_adc_channel_values = [' ', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'AUX1', 'AUX2', 'AUX3', 'AUX4']
@@ -365,6 +452,9 @@ wanda_adc_channel_checker = [] # user input validation
 for i in range(41):
     wanda_adc_channel_checker.append(0)
 wanda_adc_type_values = ['Pressure Transducer', 'Load Cell', 'Thermocouple']
+wanda_adc_pressure_values = ['good']
+wanda_adc_load_values = ['job']
+wanda_adc_thermo_values = ['chris']
 
 # object used to hold all adc channels
 wanda_adc_channels = adc_channel_list()
@@ -551,3 +641,4 @@ Label(confirm_sframe, text='').grid(row=4, column=0, padx=padding, pady=padding)
 
 # END
 root.mainloop()
+#root.destroy()
