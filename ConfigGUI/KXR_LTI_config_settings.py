@@ -5,6 +5,7 @@ from tkinter import messagebox
 from tkinter import colorchooser
 import os
 import socket
+import tv_communication as tv
 
 
 
@@ -198,69 +199,8 @@ def input_validation():
     if all_good:
         log()
         stm32_send()
-        #from tv_communication import tv_send # I know this is bad coding practice. Sue me
-        tv_send()
+        tv.tv_send(wanda_adc_channels, tv_entry_mode, tv_entry_rocket)
         wanda_send()
-
-def tv_send():
-    tv_log = open(tv_log_path, 'w')
-    
-    tv_log.write('Telemetry Viewer v0.8 Settings\n\
-\n\
-GUI Settings:\n\
-\n\
-    tile column count = 6\n\
-    tile row count = 6\n\
-    time format = Only Time\n\
-    show 24-hour time = false\n\
-    show hint notifications = true\n\
-    hint notifications color = 0x00FF00\n\
-    show warning notifications = true\n\
-    warning notifications color = 0xFFFF00\n\
-    show failure notifications = true\n\
-    failure notifications color = 0xFF0000\n\
-    show verbose notifications = false\n\
-    verbose notifications color = 0x00FFFF\n\
-    show plot tooltips = true\n\
-    smooth scrolling = true\n\
-    show fps and period = false\n\
-    benchmarking = false\n\
-    antialiasing level = 8\n\
-\n\
-1 Connections:\n\
-\n\
-    connection type = UDP\n\
-    server port = 8080\n\
-    packet type = Binary\n\
-    sample rate hz = 1000\n\
-    sync word = 0xAA\n\
-    sync word byte count = 1\n\
-    datasets count = 39\n\
-\n\
-')
-    
-    # loop through adc channels
-    for channel in wanda_adc_channels.adc_channels:
-        if channel.entry_channel.current() != 0:
-            tv_log.write('      dataset location = ' + str( (channel.entry_channel.current()-1) * 4 + 1 ) + '\n')
-            tv_log.write('      binary processor = float32 LSB First\n')
-            tv_log.write('      name = ' + str(channel.data_type_name.get()) + '\n')
-            tv_log.write('      color = 0x' + str(channel.color_code.replace('#', '')) + '\n')
-            tv_log.write('      unit = '  + '\n')
-            tv_log.write('      conversion factor a = 1.0\n')
-            tv_log.write('      conversion factor b = 1.0\n')
-            tv_log.write('\n')
-    
-    tv_log.write('      checksum location = -1\n\
-      checksum processor = null\n\
-\n\
-0 Charts:\n\
-\n')
-    
-    tv_log.write(tv_entry_mode.get()+'\n')
-    tv_log.write(tv_entry_rocket.get()+'\n')
-
-    tv_log.close()
 
 # sending stm 32 data
 def stm32_send():
