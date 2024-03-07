@@ -31,11 +31,13 @@ class adc_channel:
         self.data_channel = 0
         self.data_type = 0
         self.data_type_name = 0
+        self.data_unit = 0
         self.data_serial = 0
         
         self.entry_channel = 0
         self.entry_type = 0
         self.entry_type_name = 0
+        self.entry_unit = 0
         self.entry_serial = 0
         
         self.color_code = 0
@@ -57,16 +59,20 @@ class adc_channel:
         # type name
         self.data_type_name = StringVar()
         self.entry_type_name = ttk.Combobox(wanda_sframe, values=[' '], state='readonly', textvariable=self.data_type_name)
-        self.entry_type_name.bind('<<ComboboxSelected>>', self.type_selection)
+        self.entry_type_name.bind('<<ComboboxSelected>>', self.type_update)
         self.entry_type_name.grid(row=num_channels+4, column=2, padx=padding, pady=padding)
+        # unit
+        self.data_unit = StringVar()
+        self.entry_unit = ttk.Combobox(wanda_sframe, values=wanda_adc_unit_values, state='readonly', textvariable=self.data_unit)
+        self.entry_unit.grid(row=num_channels+4, column=3, padx=padding, pady=padding)
         # serial
         self.data_serial = StringVar()
-        self.entry_serial = Spinbox(wanda_sframe, from_=1, to=127, wrap=True, textvariable=self.data_serial, validate='all', validatecommand = validate_input)
-        self.entry_serial.grid(row=num_channels+4, column=3, padx=padding, pady=padding)
+        self.entry_serial = Entry(wanda_sframe, textvariable=self.data_serial, state='readonly')
+        self.entry_serial.grid(row=num_channels+4, column=4, padx=padding, pady=padding)
         # color
         self.color_code = '#000000'
         self.color_button = Button(wanda_sframe, text='Color', command=self.choose_color)
-        self.color_button.grid(row=num_channels+4, column=4, padx=padding, pady=padding)
+        self.color_button.grid(row=num_channels+4, column=5, padx=padding, pady=padding)
 
     # destroys last adc row
     def destroy_widget(self):
@@ -74,6 +80,7 @@ class adc_channel:
         self.entry_channel.destroy()
         self.entry_type.destroy()
         self.entry_type_name.destroy()
+        self.entry_unit.destroy()
         self.entry_serial.destroy()
         self.color_button.destroy()
 
@@ -118,6 +125,12 @@ class adc_channel:
             self.entry_type_name.config(values=wanda_adc_load_values)
         if self.entry_type.current() == 2:
             self.entry_type_name.config(values=wanda_adc_thermo_values)
+        self.entry_type_name.current(0)
+        self.data_serial.set(self.entry_type_name.current())
+    
+    # set type name update
+    def type_update(self, event):
+        self.data_serial.set(self.entry_type_name.current())
 
 
 
@@ -178,6 +191,9 @@ def input_validation():
         if wanda.entry_type_name.get().strip() == '':
             messagebox.showwarning(title='Incomplete Input', message='You are missing a type name')
             all_good = False
+        if wanda.entry_unit.get().strip() == '':
+            messagebox.showwarning(title='Incomplete Input', message='You are missing a unit')
+            all_good = False
         if wanda.entry_serial.get().strip() == '':
             messagebox.showwarning(title='Incomplete Input', message='You are missing a serial')
             all_good = False
@@ -225,7 +241,7 @@ def stm32_send():
 
     stm32_log.close()
     
-    # Wanda communication
+# Wanda communication
 # send unsigned, 32-bit int over network
 def send_int(number: int):
     wandaSocket.sendall(number.to_bytes(length=4, byteorder="little", signed=False))
@@ -257,6 +273,7 @@ def log():
         config_log.write(channel.data_channel.get()+'\n')
         config_log.write(channel.data_type.get()+'\n')
         config_log.write(channel.data_type_name.get()+'\n')
+        config_log.write(channel.data_unit.get()+'\n')
         config_log.write(channel.data_serial.get()+'\n')
         config_log.write(channel.color_code+'\n')
         
@@ -294,6 +311,7 @@ def read():
         wanda_adc_channels.adc_channels[i].data_channel.set(config_log.readline().strip())
         wanda_adc_channels.adc_channels[i].data_type.set(config_log.readline().strip())
         wanda_adc_channels.adc_channels[i].data_type_name.set(config_log.readline().strip())
+        wanda_adc_channels.adc_channels[i].data_unit.set(config_log.readline().strip())
         wanda_adc_channels.adc_channels[i].data_serial.set(config_log.readline().strip())
         wanda_adc_channels.adc_channels[i].color_code = config_log.readline().strip()
         wanda_adc_channels.adc_channels[i].color_button.config(bg=wanda_adc_channels.adc_channels[i].color_code)
@@ -324,7 +342,7 @@ prev_selection = 0
 # root
 root = Tk()
 root.title("KXR: LTI Configurations")
-root.geometry("900x600")
+root.geometry("1200x600")
 validate_input = (root.register(correct_input), '%P')
 
 # font settings
@@ -384,7 +402,8 @@ Label(wanda_sframe, text='[ADC]').grid(row=1, column=0, padx=padding, pady=paddi
 Label(wanda_sframe, text='Physical').grid(row=3, column=0, padx=padding, pady=padding)
 Label(wanda_sframe, text='Type').grid(row=3, column=1, padx=padding, pady=padding)
 Label(wanda_sframe, text='Type Name').grid(row=3, column=2, padx=padding, pady=padding)
-Label(wanda_sframe, text='Serial').grid(row=3, column=3, padx=padding, pady=padding)
+Label(wanda_sframe, text='Unit').grid(row=3, column=3, padx=padding, pady=padding)
+Label(wanda_sframe, text='Serial').grid(row=3, column=4, padx=padding, pady=padding)
 
 # values for the user to select
 wanda_adc_channel_values = [' ', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'AUX1', 'AUX2', 'AUX3', 'AUX4']
@@ -392,9 +411,10 @@ wanda_adc_channel_checker = [] # user input validation
 for i in range(41):
     wanda_adc_channel_checker.append(0)
 wanda_adc_type_values = ['Pressure Transducer', 'Load Cell', 'Thermocouple']
-wanda_adc_pressure_values = ['good']
-wanda_adc_load_values = ['job']
-wanda_adc_thermo_values = ['chris']
+wanda_adc_pressure_values = [' ', 'Rocket_Nitrogen', 'Rocket_Nitrogen_Regulated', 'Rocket_N2O', 'Rocket_Comb_Chamber', 'Rocket_Injector', 'Wanda_N2O', 'Wanda_Nitrogen', 'Wanda_Air']
+wanda_adc_load_values = [' ', 'Load_Cell_1', 'Load_Cell_2', 'Load_Cell_3'] #Load_Cell_All for sending to tv
+wanda_adc_thermo_values = [' ', 'Rocket_N2O_Vent', 'Rocket_N2O_Tank_Top', 'Rocket_N2O_Tank_Middle', 'Rocket_N2O_Tank_Bottom', 'Rocket_Comb_Chamber']
+wanda_adc_unit_values = [' ', 'unit']
 
 # object used to hold all adc channels
 wanda_adc_channels = adc_channel_list()

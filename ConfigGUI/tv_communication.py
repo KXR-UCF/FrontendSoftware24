@@ -31,10 +31,10 @@ GUI Settings:\n\
 \tconnection type = UDP\n\
 \tserver port = 8080\n\
 \tpacket type = Binary\n\
-\tsample rate hz = 1000\n\
+\tsample rate hz = 24\n\
 \tsync word = 0xAA\n\
 \tsync word byte count = 1\n\
-\tdatasets count = 39\n\
+\tdatasets count = ' + str(wanda_adc_channels.num_channels) + '\n\
 \n\
 ')
     
@@ -45,7 +45,7 @@ GUI Settings:\n\
             tv_log.write('\t\tbinary processor = float32 LSB First\n')
             tv_log.write('\t\tname = ' + str(channel.data_type_name.get()) + '\n')
             tv_log.write('\t\tcolor = 0x' + str(channel.color_code.replace('#', '')) + '\n')
-            tv_log.write('\t\tunit = '  + '\n')
+            tv_log.write('\t\tunit = ' + str(channel.data_unit.get()) + '\n')
             tv_log.write('\t\tconversion factor a = 1.0\n')
             tv_log.write('\t\tconversion factor b = 1.0\n')
             tv_log.write('\n')
