@@ -63,7 +63,7 @@ class adc_channel:
         self.entry_type_name.grid(row=num_channels+4, column=2, padx=padding, pady=padding)
         # unit
         self.data_unit = StringVar()
-        self.entry_unit = ttk.Combobox(wanda_sframe, values=wanda_adc_unit_values, state='readonly', textvariable=self.data_unit)
+        self.entry_unit = Entry(wanda_sframe, textvariable=self.data_unit, state='readonly')
         self.entry_unit.grid(row=num_channels+4, column=3, padx=padding, pady=padding)
         # serial
         self.data_serial = StringVar()
@@ -121,10 +121,13 @@ class adc_channel:
     def type_selection(self, event):
         if self.entry_type.current() == 0:
             self.entry_type_name.config(values=wanda_adc_pressure_values)
+            self.data_unit.set(wanda_adc_unit_values[1])
         if self.entry_type.current() == 1:
             self.entry_type_name.config(values=wanda_adc_load_values)
+            self.data_unit.set(wanda_adc_unit_values[2])
         if self.entry_type.current() == 2:
             self.entry_type_name.config(values=wanda_adc_thermo_values)
+            self.data_unit.set(wanda_adc_unit_values[3])
         self.entry_type_name.current(0)
         self.data_serial.set(self.entry_type_name.current())
     
@@ -236,8 +239,8 @@ def stm32_send():
             stm32_log.write(button.get().strip()+'\n')
     
     # may not need these
-    stm32_log.write(tv_entry_mode.get()+'\n')
-    stm32_log.write(tv_entry_rocket.get()+'\n')
+    #stm32_log.write(tv_entry_mode.get()+'\n')
+    #stm32_log.write(tv_entry_rocket.get()+'\n')
 
     stm32_log.close()
     

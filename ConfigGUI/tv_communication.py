@@ -56,7 +56,7 @@ GUI Settings:\n\
 0 Charts:\n\
 \n')
     
-    tv_log.write(tv_entry_mode.get()+'\n')
-    tv_log.write(tv_entry_rocket.get()+'\n')
+    #tv_log.write(tv_entry_mode.get()+'\n')
+    #tv_log.write(tv_entry_rocket.get()+'\n')
 
     tv_log.close()
