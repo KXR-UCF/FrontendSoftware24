@@ -257,17 +257,21 @@ def get_config_command(channel_number: int, sensor_type: int, serial_number: int
 
 def wanda_send():
     temp = 0
+    isLoadCell = False
     for channel in wanda_adc_channels.adc_channels:
         if channel.entry_channel.current() != 0:
             if channel.entry_channel.current() > temp:
                 temp = channel.entry_channel.current()
+            if channel.data_type.get() == 'Load Cell':
+                isLoadCell = True
             #print("channel: " + str(channel.entry_channel.current()-1))
             #print("type: " + str(channel.entry_type.current()))
             #print("serial: " + str(channel.entry_serial.get()))
             send_int(get_config_command(channel.entry_channel.current()-1,
                                         channel.entry_type.current(),
                                         int(channel.entry_serial.get())))
-    send_int(get_config_command(temp, 1, 0))
+    if isLoadCell:
+        send_int(get_config_command(temp, 1, 0))
 # ^ good job Joey!
 
 # how we save data so we don't need to reinput stuff
