@@ -414,7 +414,7 @@ wanda_adc_type_values = ['Pressure Transducer', 'Load Cell', 'Thermocouple']
 wanda_adc_pressure_values = [' ', 'Rocket_Nitrogen', 'Rocket_Nitrogen_Regulated', 'Rocket_N2O', 'Rocket_Comb_Chamber', 'Rocket_Injector', 'Wanda_N2O', 'Wanda_Nitrogen', 'Wanda_Air']
 wanda_adc_load_values = [' ', 'Load_Cell_1', 'Load_Cell_2', 'Load_Cell_3'] #Load_Cell_All for sending to tv
 wanda_adc_thermo_values = [' ', 'Rocket_N2O_Vent', 'Rocket_N2O_Tank_Top', 'Rocket_N2O_Tank_Middle', 'Rocket_N2O_Tank_Bottom', 'Rocket_Comb_Chamber']
-wanda_adc_unit_values = [' ', 'unit']
+wanda_adc_unit_values = [' ', 'PSI', 'Pounds', 'Celsius', 'Fahrenheit']
 
 # object used to hold all adc channels
 wanda_adc_channels = adc_channel_list()
