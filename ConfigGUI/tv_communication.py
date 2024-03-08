@@ -8,6 +8,8 @@ def tv_send(wanda_adc_channels, tv_entry_mode, tv_entry_rocket):
     isLoadCell = False
     for channel in wanda_adc_channels.adc_channels:
         if channel.entry_channel.current() != 0:
+            if channel.entry_channel.current() > temp:
+                temp = channel.entry_channel.current()
             if channel.data_type.get() == 'Load Cell':
                 isLoadCell = True
     
@@ -48,14 +50,8 @@ GUI Settings:\n\
         tv_log.write('\tdatasets count = ' + str(wanda_adc_channels.num_channels) + '\n\n')
     
     # loop through adc channels
-    temp = 0
-    isLoadCell = False
     for channel in wanda_adc_channels.adc_channels:
         if channel.entry_channel.current() != 0:
-            if channel.entry_channel.current() > temp:
-                temp = channel.entry_channel.current()
-            if channel.data_type.get() == 'Load Cell':
-                isLoadCell = True
             tv_log.write('\t\tdataset location = ' + str( (channel.entry_channel.current()-1) * 4 + 1 ) + '\n')
             tv_log.write('\t\tbinary processor = float32 LSB First\n')
             tv_log.write('\t\tname = ' + str(channel.data_type_name.get()) + '\n')
@@ -65,15 +61,15 @@ GUI Settings:\n\
             tv_log.write('\t\tconversion factor b = 1.0\n')
             tv_log.write('\n')
         
-        if isLoadCell:
-            tv_log.write('\t\tdataset location = ' + str( (temp) * 4 + 1 ) + '\n')
-            tv_log.write('\t\tbinary processor = float32 LSB First\n')
-            tv_log.write('\t\tname = Load_Cell_all\n')
-            tv_log.write('\t\tcolor = 0x000000\n')
-            tv_log.write('\t\tunit = Pounds\n')
-            tv_log.write('\t\tconversion factor a = 1.0\n')
-            tv_log.write('\t\tconversion factor b = 1.0\n')
-            tv_log.write('\n')
+    if isLoadCell:
+        tv_log.write('\t\tdataset location = ' + str( (temp) * 4 + 1 ) + '\n')
+        tv_log.write('\t\tbinary processor = float32 LSB First\n')
+        tv_log.write('\t\tname = Load_Cell_all\n')
+        tv_log.write('\t\tcolor = 0x000000\n')
+        tv_log.write('\t\tunit = Pounds\n')
+        tv_log.write('\t\tconversion factor a = 1.0\n')
+        tv_log.write('\t\tconversion factor b = 1.0\n')
+        tv_log.write('\n')
     
     tv_log.write('\t\tchecksum location = -1\n\
 \t\tchecksum processor = null\n\
