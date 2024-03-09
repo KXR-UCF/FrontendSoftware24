@@ -27,7 +27,7 @@ except Exception as e:
 # object for each channel row
 class adc_channel:
     def __init__(self, index):
-        self.index = index
+        self.index = index+1
         self.data_channel = 0
         self.data_type = 0
         self.data_type_name = 0
