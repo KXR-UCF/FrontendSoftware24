@@ -1,7 +1,5 @@
-tv_log_path = 'Python Output/alldata.txt' # will need to update later
-
-
-def tv_send(wanda_adc_channels, tv_entry_mode, tv_entry_rocket):
+# sending tv data
+def tv_send(tv_log_path, wanda_adc_channels, tv_entry_mode, tv_entry_rocket):
     tv_log = open(tv_log_path, 'w')
     
     temp = 0

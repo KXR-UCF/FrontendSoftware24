@@ -3,16 +3,23 @@ from tkinter import ttk
 import tkinter.font as tkFont
 from tkinter import messagebox
 from tkinter import colorchooser
-import os
 import socket
-import tv_communication as tv
 
+import stm32_comms as stm32
+import tv_comms as tv
+import wanda_comms as wanda
+import config_logging as logging
 
+# file paths
+stm32_log_path = 'Python Output/stm32_log.txt' # will need to update later
+tv_log_path = 'Python Output/alldata.txt' # will need to update later
+config_log_path = 'Python Output/' # will need to update later
 
 # Wanda info
 PRINT_SENSORS_COMMAND = 0x55000000
 ADD_SENSOR_COMMAND = 0xCF000000
 wandaSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# will need to update later
 """
 # Wanda connection
 try:
@@ -164,10 +171,6 @@ class adc_channel_list:
 
 
 # Functions
-# whenever something needs to happen when changing the tabs
-def update_tabs(event):
-    nope = 0
-
 # for serial spinbox to keep typed values in range
 # don't know how it all works, grabbed from stackoverflow and changed some shit around
 def correct_input(text):
@@ -184,20 +187,20 @@ def input_validation():
     all_good = True
     
     # makes sure that all channels have channel, type, and serial selected
-    for wanda in wanda_adc_channels.adc_channels:
-        if wanda.entry_channel.get().strip() == '':
+    for channel in wanda_adc_channels.adc_channels:
+        if channel.entry_channel.get().strip() == '':
             messagebox.showwarning(title='Incomplete Input', message='You are missing a channel')
             all_good = False
-        if wanda.entry_type.get().strip() == '':
+        if channel.entry_type.get().strip() == '':
             messagebox.showwarning(title='Incomplete Input', message='You are missing a type')
             all_good = False
-        if wanda.entry_type_name.get().strip() == '':
+        if channel.entry_type_name.get().strip() == '':
             messagebox.showwarning(title='Incomplete Input', message='You are missing a type name')
             all_good = False
-        if wanda.entry_unit.get().strip() == '':
+        if channel.entry_unit.get().strip() == '':
             messagebox.showwarning(title='Incomplete Input', message='You are missing a unit')
             all_good = False
-        if wanda.entry_serial.get().strip() == '':
+        if channel.entry_serial.get().strip() == '':
             messagebox.showwarning(title='Incomplete Input', message='You are missing a serial')
             all_good = False
     
@@ -216,137 +219,15 @@ def input_validation():
     
     # log settings and send them if that are all good
     if all_good:
-        log()
-        stm32_send()
-        tv.tv_send(wanda_adc_channels, tv_entry_mode, tv_entry_rocket)
-        wanda_send()
-
-# sending stm 32 data
-def stm32_send():
-    stm32_log = open(stm32_log_path, 'w')
-    
-    # loop through switches
-    for switch in stm32_entry_switches:
-        if switch.get().strip() == '':
-            stm32_log.write('Empty\n')
-        else:
-            stm32_log.write(switch.get().strip()+'\n')
-    # loop through buttons
-    for button in stm32_entry_buttons:
-        if button.get().strip() == '':
-            stm32_log.write('Empty\n')
-        else:
-            stm32_log.write(button.get().strip()+'\n')
-    
-    # may not need these
-    #stm32_log.write(tv_entry_mode.get()+'\n')
-    #stm32_log.write(tv_entry_rocket.get()+'\n')
-
-    stm32_log.close()
-    
-# Wanda communication
-# send unsigned, 32-bit int over network
-def send_int(number: int):
-    wandaSocket.sendall(number.to_bytes(length=4, byteorder="little", signed=False))
-    errorcode = wandaSocket.recv(32)
-    print(f"Error code: {int.from_bytes(errorcode, byteorder='little', signed=False)}")
-
-# create configuration command
-def get_config_command(channel_number: int, sensor_type: int, serial_number: int) -> int:
-    return ADD_SENSOR_COMMAND | channel_number | (sensor_type << 6) | (serial_number << 9)
-
-def wanda_send():
-    temp = 0
-    isLoadCell = False
-    for channel in wanda_adc_channels.adc_channels:
-        if channel.entry_channel.current() != 0:
-            if channel.entry_channel.current() > temp:
-                temp = channel.entry_channel.current()
-            if channel.data_type.get() == 'Load Cell':
-                isLoadCell = True
-            #print("channel: " + str(channel.entry_channel.current()-1))
-            #print("type: " + str(channel.entry_type.current()))
-            #print("serial: " + str(channel.entry_serial.get()))
-            send_int(get_config_command(channel.entry_channel.current()-1,
-                                        channel.entry_type.current(),
-                                        int(channel.entry_serial.get())))
-    if isLoadCell:
-        send_int(get_config_command(temp, 1, 0))
-# ^ good job Joey!
-
-# how we save data so we don't need to reinput stuff
-def log():
-    config_log = open(config_log_path+config_log_name.get().strip()+'.txt', 'w')
-    
-    # wanda
-    config_log.write(str(wanda_adc_channels.num_channels)+'\n')
-    for channel in wanda_adc_channels.adc_channels:
-        config_log.write(channel.data_channel.get()+'\n')
-        config_log.write(channel.data_type.get()+'\n')
-        config_log.write(channel.data_type_name.get()+'\n')
-        config_log.write(channel.data_unit.get()+'\n')
-        config_log.write(channel.data_serial.get()+'\n')
-        config_log.write(channel.color_code+'\n')
-        
-    # stm 32
-    for switch in stm32_entry_switches:
-        if switch.get().strip() == '':
-            config_log.write('\n')
-        else:
-            config_log.write(switch.get().strip()+'\n')
-    for button in stm32_entry_buttons:
-        if button.get().strip() == '':
-            config_log.write('\n')
-        else:
-            config_log.write(button.get().strip()+'\n')
-    
-    # tv
-    config_log.write(tv_entry_mode.get()+'\n')
-    config_log.write(tv_entry_rocket.get()+'\n')
-    
-    config_log.close()
-
-# how we read in the data that we saved
-def read():
-    if os.path.isfile(config_log_path+config_log_name.get().strip()+'.txt'):
-        config_log = open(config_log_path+config_log_name.get().strip()+'.txt', 'r')
-    else:
-        messagebox.showwarning(title='Invalid Input', message='That file name is unavalable')
-        return
-    
-    # wanda
-    loop = int(config_log.readline().strip())
-    
-    for i in range(loop):
-        wanda_adc_channels.add_channel(1)
-        wanda_adc_channels.adc_channels[i].data_channel.set(config_log.readline().strip())
-        wanda_adc_channels.adc_channels[i].data_type.set(config_log.readline().strip())
-        wanda_adc_channels.adc_channels[i].data_type_name.set(config_log.readline().strip())
-        wanda_adc_channels.adc_channels[i].data_unit.set(config_log.readline().strip())
-        wanda_adc_channels.adc_channels[i].data_serial.set(config_log.readline().strip())
-        wanda_adc_channels.adc_channels[i].color_code = config_log.readline().strip()
-        wanda_adc_channels.adc_channels[i].color_button.config(bg=wanda_adc_channels.adc_channels[i].color_code)
-    wanda_adc_channels.delete_channel(1)
-    
-    # stm 32
-    for switch in stm32_data_switches:
-        switch.set(config_log.readline().strip())
-    for button in stm32_data_buttons:
-        button.set(config_log.readline().strip())
-    
-    # tv
-    tv_data_mode.set(config_log.readline().strip())
-    tv_data_rocket.set(config_log.readline().strip())
-    
-    config_log.close()
+        logging.log(config_log_path, config_log_name, wanda_adc_channels, stm32_entry_switches, stm32_entry_buttons, tv_entry_mode, tv_entry_rocket)
+        stm32.stm32_send(stm32_log_path, stm32_entry_switches, stm32_entry_buttons)
+        tv.tv_send(tv_log_path, wanda_adc_channels, tv_entry_mode, tv_entry_rocket)
+        wanda.wanda_send(wanda_adc_channels)
 
 
 
 # Variables
 padding = 5
-stm32_log_path = 'Python Output/stm32_log.txt' # will need to update later
-tv_log_path = 'Python Output/alldata.txt' # will need to update later
-config_log_path = 'Python Output/' # will need to update later
 prev_selection = 0
 
 # Window and tab setup and control
@@ -373,9 +254,9 @@ tv_tab = ttk.Frame(tabControl)
 confirm_tab = ttk.Frame(tabControl)
 
 # tab settings
-tabControl.bind('<<NotebookTabChanged>>', update_tabs)
+tabControl.bind('<<NotebookTabChanged>>')
 tabControl.add(wanda_tab, text='Wanda')
-tabControl.add(stm32_tab, text='STM 32')
+tabControl.add(stm32_tab, text='STM32')
 tabControl.add(tv_tab, text='Telemetry Viewer')
 tabControl.add(confirm_tab, text ='Confirmation')
 tabControl.pack(fill="both", expand=1)
@@ -445,7 +326,7 @@ wanda_adc_channels.add_channel(int(loop_count.get())) # initialize first row
 
 
 
-# !!!!!-----STM 32-----!!!!!
+# !!!!!-----STM32-----!!!!!
 
 # How The Scrollbar Works (Please Do Not Touch)
 # Create A Main Frame
@@ -467,7 +348,7 @@ stm32_canvas.create_window((0,0), window=stm32_sframe, anchor='nw')
 # End of Scrollbar Code
 
 # Start of actually reading in user input (use: stm32_sframe)
-Label(stm32_sframe, text ='STM 32 Options:').grid(row=0, column=0, padx=padding, pady=padding)
+Label(stm32_sframe, text ='STM32 Options:').grid(row=0, column=0, padx=padding, pady=padding)
 
 
 # SWITCHES
@@ -596,15 +477,7 @@ Label(confirm_sframe, text ='Please Provide Config Name').grid(row=0, column=0, 
 config_log_name = Entry(confirm_sframe)
 config_log_name.grid(row=1, column=0, padx=padding, pady=padding) # send the data
 Button(confirm_sframe, text='Commit Settings', command=input_validation).grid(row=2, column=0, padx=padding, pady=padding) # send the data
-Button(confirm_sframe, text='Read Settings', command=read).grid(row=3, column=0, padx=padding, pady=padding) # read and apply last settings
-
-# testing purposes
-# remove before release
-#Button(confirm_sframe, text='TCP CHECK', command=lambda: wanda_send()).grid(row=1, column=1, padx=padding, pady=padding)
-#Button(confirm_sframe, text='PRINT SENSORS', command=lambda: send_int(0x55000000)).grid(row=2, column=1, padx=padding, pady=padding)
-#Button(confirm_sframe, text='UWU 32', command=stm32_send).grid(row=3, column=1, padx=padding, pady=padding)
-#Button(confirm_sframe, text='user', command=input_validation).grid(row=4, column=1, padx=padding, pady=padding)
-#Button(confirm_sframe, text='color', command=tv_send).grid(row=5, column=1, padx=padding, pady=padding)
+Button(confirm_sframe, text='Read Settings', command=lambda: logging.read(config_log_path, config_log_name, wanda_adc_channels, stm32_data_switches, stm32_data_buttons, tv_data_mode, tv_data_rocket)).grid(row=3, column=0, padx=padding, pady=padding) # read and apply last settings
 
 Label(confirm_sframe, text='').grid(row=4, column=0, padx=padding, pady=padding) # just padding at end of window
 
@@ -612,4 +485,3 @@ Label(confirm_sframe, text='').grid(row=4, column=0, padx=padding, pady=padding)
 
 # END
 root.mainloop()
-#root.destroy()
